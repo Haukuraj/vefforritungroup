@@ -129,6 +129,59 @@ app.delete(`${apiPath}${version}/songs/:id`, (req,res) => {
 
 -------------------------- */
 
+app.get(`${apiPath}${version}/playlists`, (req, res) => {
+  res.json(playlists);
+});
+
+app.get(`${apiPath}${version}/playlists/:id`, (req, res) =>{
+  const playlist =playlists.find(pl=>pl.id ==req.params.id);
+  if(!playlist){
+    return res.status(404).json({error:"playlist not found"});
+
+  }
+
+  const detailedPlaylist={
+    ...playlist,
+    songs:playlist.songIds.map(songId=>songs.find(song=>song.id==songId))
+  };
+  res.json(detailedPlaylist);
+});
+
+
+app.post(`${apiPath}${version}/playlists`, (req, res) => {
+  const { name } = req.body;
+
+  if (!name) {
+      return res.status(400).json({ error: "Playlist name required" });
+  }
+
+  if (playlists.some(pl => pl.name.toLowerCase() === name.toLowerCase())) {
+      return res.status(409).json({ error: "Playlist exists" });
+  }
+
+  // Fix: Corrected variable name & array name
+  const newPlaylist = { id: nextPlaylistId++, name, songIds: [] };
+  playlists.push(newPlaylist); // Fix: Changed from "playlist" to "playlists"
+
+  res.status(201).json(newPlaylist);
+});
+
+app.post(`${apiPath}${version}/playlists/:id/songs/:songId`, (req, res) => {
+  const playlist = playlists.find(pl => pl.id == req.params.id);
+  const song = songs.find(s => s.id == req.params.songId);
+
+  if(!playlist || !song) {
+    return res.status(404).json({error: "Playlist or song not found"});
+  }
+
+  if (playlist.songIds.includes(song.id)){
+    return res.status(409).json({ error: "song already in playlist"});
+  }
+
+  playlist.songIds.push(song.id);
+  res.json(playlist);
+});
+
 /* --------------------------
 
       SERVER INITIALIZATION  
