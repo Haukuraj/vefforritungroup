@@ -71,26 +71,32 @@ app.get(`${apiPath}${version}/songs`,(req, res)=> {
 });
 
 
-app.post(`${apiPath}${version}/songs`,(req, res)=>{
-  const {title, artist }= req.body;
+app.post(`${apiPath}${version}/playlists/:id/songs/:songId`, (req, res) => {
+  const playlist = playlists.find(pl => pl.id == req.params.id);
+  const song = songs.find(s => s.id == req.params.songId);
 
-  if (!title || !artist){
-    return res.status(400).json({error:"A title and a Artist are required fields"});
-
-  }
-  const exists = songs.some(song =>
-    song.title.toLowerCase()===title.toLowerCase()&&
-    song.artist.toLowerCase() === artist.toLowerCase()
-  );
-  if (exists){
-    return res.status(409).json({error:"Song exists"});
+  if (!playlist || !song) {
+      return res.status(404).json({ error: "Playlist or Song not found" });
   }
 
-  const newSong ={id: nextSongId++, title, artist};
+  // Prevent duplicate song in playlist
+  if (playlist.songIds.includes(song.id)) {
+      return res.status(409).json({ error: "Song already in playlist" });
+  }
+
+  playlist.songIds.push(song.id);
+  res.json(playlist);
+});
+
+app.post (`${apiPath}${version}/songs`, (req, res) =>{
+  const { title, artist }=req.body;
+  if(!title|| !artist){
+    return res.status(400).json({error:"A Title and Artist are required"})
+  }
+  const newSong={id: nextSongId++, title, artist};
   songs.push(newSong);
   res.status(201).json(newSong);
 });
-
 app.patch(`${apiPath}${version}/songs/:id`, (req,res) => {
   const {id} = req.params;
   const {title,artist} = req.body;
@@ -181,6 +187,26 @@ app.post(`${apiPath}${version}/playlists/:id/songs/:songId`, (req, res) => {
   playlist.songIds.push(song.id);
   res.json(playlist);
 });
+
+app.patch(`${apiPath}${version}/playlists/:id/songs/:songId`, (req, res) => {
+  const playlistId = parseInt(req.params.id);
+  const songId = parseInt(req.params.songId);
+
+  const playlist = playlists.find(pl => pl.id === playlistId);
+  const song = songs.find(s => s.id === songId);
+
+  if (!playlist || !song) {
+      return res.status(404).json({ error: "Playlist or song not found" });
+  }
+
+  if (playlist.songIds.includes(song.id)) {
+      return res.status(409).json({ error: "Song already in playlist" });
+  }
+
+  playlist.songIds.push(song.id);
+  res.json(playlist);
+});
+
 
 /* --------------------------
 
