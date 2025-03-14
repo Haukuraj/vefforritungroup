@@ -57,75 +57,75 @@ let nextPlaylistId = 4;
         SONGS ENDPOINTS     
 
 -------------------------- */
+
+// get all songs
 app.get(`${apiPath}${version}/songs`,(req, res)=> {
   const filter =req.query.filter;
-  let results = songs;
+  let results = songs; // default return all songs
 
   if (filter){
     results=songs.filter(song =>
-      song.title.toLowerCase().includes(filter.toLowerCase())||
-      song.artist.toLowerCase().includes(filter.toLowerCase())
+      song.title.toLowerCase().includes(filter.toLowerCase())|| // song title
+      song.artist.toLowerCase().includes(filter.toLowerCase()) // artists name
     );
   }
-  res.json(results);
+  res.json(results); // Returning as a json
 });
 
 
-app.post(`${apiPath}${version}/playlists/:id/songs/:songId`, (req, res) => {
-  const playlist = playlists.find(pl => pl.id == req.params.id);
-  const song = songs.find(s => s.id == req.params.songId);
-
-  if (!playlist || !song) {
-      return res.status(404).json({ error: "Playlist or Song not found" });
-  }
-
-  // Prevent duplicate song in playlist
-  if (playlist.songIds.includes(song.id)) {
-      return res.status(409).json({ error: "Song already in playlist" });
-  }
-
-  playlist.songIds.push(song.id);
-  res.json(playlist);
-});
-
+// Add a new song
 app.post (`${apiPath}${version}/songs`, (req, res) =>{
-  const { title, artist }=req.body;
+  const { title, artist }=req.body; // gets the title and artist
+
+  // Needs a title and an artist
   if(!title|| !artist){
     return res.status(400).json({error:"A Title and Artist are required"})
   }
+
+  // Making an new song with a new id
   const newSong={id: nextSongId++, title, artist};
-  songs.push(newSong);
-  res.status(201).json(newSong);
+  songs.push(newSong); // adding the song to the list
+  res.status(201).json(newSong); // returns the added song as json
 });
+
+
+// update a song
 app.patch(`${apiPath}${version}/songs/:id`, (req,res) => {
-  const {id} = req.params;
+  const {id} = req.params; // takes the id in the link
   const {title,artist} = req.body;
 
+  // finds the song
   const song =songs.find(song => song.id==id);
   if (!song){
-    return res.status(404).json({error: "Song not found"})
+    return res.status(404).json({error: "Song not found"}) // if it doesn't then it returns an error
   }
+
+  // updating the values
   if (title) song.title=title;
   if (artist) song.artist=artist;
 
-  res.json(song);
+  res.json(song); // Returns the song that was updated as json
 });
 
+// Delete a song by ID
 app.delete(`${apiPath}${version}/songs/:id`, (req,res) => {
-  const{id}=req.params;
-  const songIndex=songs.findIndex(song => song.id==id);
+  const{id}=req.params; // takes the id in the link
+  const songIndex=songs.findIndex(song => song.id==id); // finds the song through the id
 
   if (songIndex ===-1){
     return res.status(404).json({error:"song not found"});
   }
 
+  // checking to see if the song is in any playlist
   const isInPlaylist=playlists.some(playlist => playlist.songIds.includes(parseInt(id)));
-  if (isInPlaylist){
-    return res.status(400).json({error:"Cannot delete song, it's in the playlist"});
+  if (isInPlaylist){ // if the song is in a playlist then it returns an error
+    return res.status(400).json({error:"Cannot delete song, it's in the playlist"}); 
 
   }
+  // Removing the song
   const deletedSong =songs.splice(songIndex,1)[0];
-  res.json(deletedSong);
+
+  res.json(deletedSong); // return the deleted song as a json
 
 });
 
@@ -135,57 +135,65 @@ app.delete(`${apiPath}${version}/songs/:id`, (req,res) => {
 
 -------------------------- */
 
+// Get all playlists
 app.get(`${apiPath}${version}/playlists`, (req, res) => {
-  res.json(playlists);
+  res.json(playlists); // returns playlists as json
 });
 
+
+// Get a playlists details by seaeching for the ID
 app.get(`${apiPath}${version}/playlists/:id`, (req, res) =>{
-  const playlist =playlists.find(pl=>pl.id ==req.params.id);
+  const playlist =playlists.find(pl=>pl.id ==req.params.id); // find playlist by id
   if(!playlist){
-    return res.status(404).json({error:"playlist not found"});
+    return res.status(404).json({error:"playlist not found"}); // if it can't find the playlist it returns error
 
   }
 
+  // Create a detailed playlist object that contains all of the song info
   const detailedPlaylist={
     ...playlist,
     songs:playlist.songIds.map(songId=>songs.find(song=>song.id==songId))
   };
-  res.json(detailedPlaylist);
+  res.json(detailedPlaylist); // retuirn the playlist detail as a json
 });
 
-
+// To create a new playlist
 app.post(`${apiPath}${version}/playlists`, (req, res) => {
   const { name } = req.body;
 
-  if (!name) {
-      return res.status(400).json({ error: "Playlist name required" });
+  if (!name) { // if there is no name then it returns an error
+      return res.status(400).json({ error: "Playlist name required" }); // Return error if name is missing
   }
 
+  // Checking if a playlist with the same name already exists
   if (playlists.some(pl => pl.name.toLowerCase() === name.toLowerCase())) {
       return res.status(409).json({ error: "Playlist exists" });
   }
 
-  // Fix: Corrected variable name & array name
+  // Creating an object for the new playlist and gives a new id and can hold song ids
   const newPlaylist = { id: nextPlaylistId++, name, songIds: [] };
-  playlists.push(newPlaylist); // Fix: Changed from "playlist" to "playlists"
+  playlists.push(newPlaylist); // Adding the playlist
 
-  res.status(201).json(newPlaylist);
+  res.status(201).json(newPlaylist); // returning the new playlist info as json
 });
 
+// Add a song to a playlist
 app.post(`${apiPath}${version}/playlists/:id/songs/:songId`, (req, res) => {
-  const playlist = playlists.find(pl => pl.id == req.params.id);
-  const song = songs.find(s => s.id == req.params.songId);
+  const playlist = playlists.find(pl => pl.id == req.params.id);// Finding playlist by ID in link
+  const song = songs.find(s => s.id == req.params.songId); // find song ny the ID in link
 
+  // Needs playlist and song
   if(!playlist || !song) {
     return res.status(404).json({error: "Playlist or song not found"});
   }
 
+  // checking if the song is already in the playlist
   if (playlist.songIds.includes(song.id)){
     return res.status(409).json({ error: "song already in playlist"});
   }
 
-  playlist.songIds.push(song.id);
-  res.json(playlist);
+  playlist.songIds.push(song.id); // adding the song to the playlist
+  res.json(playlist); // Return the playlist with the added song as json
 });
 
 app.patch(`${apiPath}${version}/playlists/:id/songs/:songId`, (req, res) => {
